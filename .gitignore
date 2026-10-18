@@ -1,0 +1,13 @@
+.env
+renders/
+assets/src/
+assets/audio/*.mp3
+topics/*/assets/
+topics/*/gen/
+topics/*/index.html
+topics/*/timeline.js
+topics/*/regions.js
+topics/*/voice.mp3
+topics/*/audio.wav
+__pycache__/
+.DS_Store

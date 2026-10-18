@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<title>map-story</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous" />
+<style>
+  html, body { margin: 0; background: #06172e; }
+  body { font-family: "Kanit", sans-serif; -webkit-font-smoothing: antialiased; }
+  #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #06172e; }
+  #view { position: absolute; inset: 0; overflow: hidden; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; --z: 1; }
+  #world > img { position: absolute; left: 0; top: 0; }
+  #world > svg { position: absolute; inset: 0; overflow: visible; }
+  .reg { opacity: 0; fill-opacity: clamp(.12, calc(.62 - var(--z) * .12), .55); stroke-width: calc(2.6px / var(--z)); stroke-linejoin: round; filter: drop-shadow(0 0 calc(5px / var(--z)) rgba(255,255,255,.55)); }
+  .outline { fill: none; stroke: #ffe14d; stroke-width: calc(6px / var(--z)); stroke-linejoin: round; opacity: 0; }
+  .river { fill: none; stroke: #7fe3ff; stroke-width: calc(5px / var(--z)); stroke-linecap: round; opacity: 0; filter: drop-shadow(0 0 calc(4px / var(--z)) #7fe3ff); }
+  .arrow { fill: none; stroke: #ff2b3a; stroke-width: calc(7px / var(--z)); stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+  .route { fill: none; stroke: #ffe14d; stroke-width: calc(7px / var(--z)); stroke-linecap: round; stroke-linejoin: round; opacity: 0; filter: drop-shadow(0 0 calc(5px / var(--z)) rgba(255,225,77,.8)); }
+  .wave { fill: none; stroke: #fff4c2; stroke-width: calc(5px / var(--z)); opacity: 0; }
+  .dash { fill: none; stroke: #ffe14d; stroke-width: calc(6px / var(--z)); stroke-linecap: round; opacity: 0; }
+  /* overlay anchored to world, constant screen size */
+  .anc { position: absolute; width: 0; height: 0; }
+  .anc > .k { position: absolute; left: 0; top: 0; transform: scale(calc(1 / var(--z))); transform-origin: 0 0; }
+  .k > .in { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; }
+  .pin .in { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff7b0, #ffd21f 55%, #d99a00);
+    border: 4px solid #fff; box-shadow: 0 0 22px 6px rgba(255,214,40,.75), 0 6px 10px rgba(0,0,0,.4); transform: translate(-50%, -100%); }
+  .pin .in::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 10px solid transparent; border-top: 14px solid #fff; }
+  .label .in { font-size: 46px; font-weight: 800; color: #ffd21f; -webkit-text-stroke: 9px #1b1b1b; paint-order: stroke fill; text-shadow: 0 4px 8px rgba(0,0,0,.45); }
+  .pill .in { font-size: 44px; font-weight: 700; color: #fff; background: #e8343f; padding: 8px 26px 12px; border-radius: 18px;
+    box-shadow: 0 8px 18px rgba(0,0,0,.45), inset 0 -4px 0 rgba(0,0,0,.18); }
+  .ring .in { border: 6px dashed #ffe14d; border-radius: 50%; box-shadow: 0 0 18px rgba(255,225,77,.6); }
+  .sprite .in { transform: translate(-50%, -100%); filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)); }
+  .sprite img { display: block; height: 100%; }
+  /* screen layer */
+  #big.low { top: 560px; }
+  #big { position: absolute; left: 0; right: 0; top: 300px; text-align: center; color: #fff; opacity: 0; }
+  #big .n { font-size: 190px; font-weight: 800; line-height: 1; -webkit-text-stroke: 16px #10131a; paint-order: stroke fill; text-shadow: 0 10px 24px rgba(0,0,0,.5); }
+  #big .u { font-size: 64px; font-weight: 800; margin-top: 4px; -webkit-text-stroke: 10px #10131a; paint-order: stroke fill; }
+  .cap { position: absolute; left: 50px; right: 50px; top: 1395px; text-align: center; white-space: normal; text-wrap: balance; line-break: strict; font-size: 66px; font-weight: 800; line-height: 1.25;
+    color: #fff; -webkit-text-stroke: 12px #111; paint-order: stroke fill; text-shadow: 0 6px 14px rgba(0,0,0,.55); opacity: 0; }
+  .cap b { color: #ffd21f; font-weight: 800; }
+  .cap.top { top: 250px; }
+  .scene { position: absolute; inset: 0; opacity: 0; overflow: hidden; background: #000; }
+  .scene img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rain { position: absolute; inset: -200px; background: repeating-linear-gradient(105deg, rgba(255,255,255,0) 0 22px, rgba(255,255,255,.22) 22px 24px, rgba(255,255,255,0) 24px 61px); opacity: .55; }
+  .badge { position: absolute; right: 36px; top: 132px; background: rgba(20,20,24,.82); color: #fff; font-size: 34px; font-weight: 700; padding: 6px 22px 10px; border-radius: 30px; }
+  #wm { position: absolute; right: 30px; top: 40px; display: flex; align-items: center; gap: 12px; color: #fff; font-size: 34px; font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  #wm img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; background: #ffd21f; border: 3px solid #fff; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  #outro { position: absolute; inset: 0; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+    background: radial-gradient(ellipse at 50% 50%, rgba(6,23,46,.72) 0%, rgba(6,23,46,.96) 70%); padding: 0 60px; }
+  #outro .t { font-size: 96px; font-weight: 800; color: #ffd21f; line-height: 1.15; -webkit-text-stroke: 12px #10131a; paint-order: stroke fill;
+    text-shadow: 0 0 40px rgba(255,210,31,.55); white-space: nowrap; }
+  #outro .s { font-size: 50px; font-weight: 700; color: #fff; margin-top: 26px; -webkit-text-stroke: 8px #10131a; paint-order: stroke fill; white-space: nowrap; }
+  #outro .line { width: 0; height: 8px; border-radius: 4px; background: #ffd21f; margin: 30px auto 0; box-shadow: 0 0 18px rgba(255,210,31,.8); }
+  /* ── STYLE "muted" (ref: เหตุผลบนแผนที่): hillshade basemap, glowing solid regions, chapter pill, info card, recap */
+  .muted .reg { fill-opacity: clamp(.2, calc(.62 - var(--z) * .25), .6); stroke-width: calc(3px / var(--z)); filter: drop-shadow(0 0 calc(5px / var(--z)) rgba(255,255,255,.55)); }  /* ponytail: currentColor glow flooded close-ups (filled the whole frame) */
+  .muted .cap { top: 1140px; font-size: 54px; -webkit-text-stroke: 7px rgba(10,12,18,.85); text-shadow: 0 4px 14px rgba(0,0,0,.9); }
+  .muted .cap b { color: #ffb347; }
+  .muted .cap.top { top: 250px; }
+  #chap { position: absolute; left: 0; right: 0; top: 150px; text-align: center; opacity: 0; }
+  #chap span i { display: inline-grid; place-items: center; width: 46px; height: 46px; margin: 0 12px 0 -14px; border-radius: 50%; background: #ffd21f; color: #111;
+    font-style: normal; font-weight: 800; font-size: 32px; vertical-align: middle; transform: translateY(-2px); }
+  .icon .in { width: 92px; height: 92px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 56px;
+    box-shadow: 0 8px 18px rgba(0,0,0,.45), 0 0 0 5px rgba(255,255,255,.35); }
+  #chap span { display: inline-block; background: linear-gradient(#f5862a, #e0661a); color: #fff; font-size: 38px; font-weight: 700; padding: 6px 30px 10px;
+    border-radius: 40px; box-shadow: 0 6px 18px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.25); }
+  .icard { position: absolute; left: 80px; right: 80px; top: 1270px; opacity: 0; text-align: center; background: rgba(14,16,22,.9);
+    border: 3px solid #f08a24; border-radius: 26px; padding: 18px 24px 22px; box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 22px rgba(240,138,36,.25); }
+  .icard .h { font-size: 32px; font-weight: 700; color: #ffa040; }
+  .icard .m { font-size: 76px; font-weight: 800; color: #fff; line-height: 1.15; white-space: nowrap; }
+  .icard .f { font-size: 26px; color: #b8bcc6; white-space: nowrap; }
+  #title { position: absolute; left: 0; right: 0; top: 1060px; text-align: center; opacity: 0; color: #fff; font-weight: 800;
+    -webkit-text-stroke: 10px rgba(10,12,18,.9); paint-order: stroke fill; text-shadow: 0 6px 20px rgba(0,0,0,.8); }
+  #title .a, #title .c { font-size: 70px; line-height: 1.2; white-space: nowrap; }
+  #title .b { font-size: 140px; line-height: 1.1; color: #ff9a3c; text-shadow: 0 0 30px rgba(255,140,40,.7), 0 6px 20px rgba(0,0,0,.8); white-space: nowrap; }
+  #recap { position: absolute; left: 60px; right: 60px; top: 1260px; opacity: 0; background: rgba(14,16,22,.92); border: 3px solid #f08a24; border-radius: 26px;
+    padding: 14px 26px 18px; box-shadow: 0 10px 30px rgba(0,0,0,.55); }
+  #recap .hd { text-align: center; font-size: 36px; font-weight: 800; color: #ffa040; margin-bottom: 6px; }
+  #recap .it { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; color: #fff; padding: 10px 6px; border-top: 1px solid rgba(255,255,255,.08); opacity: 0; white-space: nowrap; }
+  #recap .it i { flex: none; width: 50px; height: 50px; border-radius: 50%; background: #f08a24; color: #111; font-style: normal; font-size: 30px; display: grid; place-items: center; }
+  #src { position: absolute; left: 30px; right: 30px; bottom: 50px; text-align: center; font-size: 20px; color: rgba(255,255,255,.55); opacity: 0; }
+  #bars { position: absolute; left: 0; right: 0; top: 520px; height: 560px; display: flex; justify-content: center; align-items: flex-end; gap: 70px; opacity: 0; pointer-events: none; }
+  #bars .b { width: 130px; display: flex; flex-direction: column; align-items: center; }
+  #bars .v { font-size: 64px; font-weight: 800; color: #ffd21f; -webkit-text-stroke: 8px #10131a; paint-order: stroke fill; }
+  #bars .bar { width: 120px; border-radius: 60px / 18px; box-shadow: inset -18px 0 24px rgba(0,0,0,.35), inset 14px 0 18px rgba(255,255,255,.25), 0 10px 24px rgba(0,0,0,.5); }
+  #bars .l { font-size: 40px; font-weight: 800; color: #fff; margin-top: 8px; -webkit-text-stroke: 7px #10131a; paint-order: stroke fill; white-space: nowrap; }
+  #root:not(.muted) .icard { top: 1600px; }  /* classic captions sit at 1395: cards/recap go below them */
+  #root:not(.muted) #recap { top: 1500px; }
+  #vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%); }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="root" data-start="0" data-duration="101.4" data-width="1080" data-height="1920">
+  <div id="view">
+    <div id="world">
+      <img src="assets/map.jpg" alt="" />
+      <svg id="svg">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#ff2b3a" /></marker></defs>
+        <g id="regs"></g><g id="lines"></g>
+      </svg>
+      <div id="ov"></div>
+    </div>
+  </div>
+  <div id="vig"></div>
+  <div id="scenes"></div>
+  <div id="big"><div class="n"></div><div class="u"></div></div>
+  <div id="caps"></div>
+  <div id="chap"><span></span></div>
+  <div id="cards"></div>
+  <div id="title"></div>
+  <div id="bars"></div>
+  <div id="recap"><div class="hd">สรุป</div></div>
+  <div id="src"></div>
+  <div id="outro"><div class="t"></div><div class="line"></div><div class="s"></div></div>
+  <div id="flash"></div>
+  <div id="wm"><img src="assets/stand.png" alt="" /><span id="chan"></span></div>
+  <audio id="snd" src="audio.wav" data-start="0" data-duration="101.4" data-track-index="10" data-volume="1"></audio>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<script src="regions.js"></script>
+<script src="timeline.js"></script>
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg", $ = (id) => document.getElementById(id);
+  const DUR = TL.duration;
+  const root = $("root"); root.dataset.duration = DUR; $("snd").dataset.duration = DUR;
+  const tl = gsap.timeline({ paused: true });
+  // world config from regions.js (tools/mapgen.py): equirectangular, x scaled by cos(mid lat)
+  const M = MAP, X = (lon) => (lon - M.lon0) * M.ppd * M.k, Y = (lat) => (M.lat1 - lat) * M.ppd;
+  const Wd = M.W, Ht = M.H;
+  $("world").style.width = Wd + "px"; $("world").style.height = Ht + "px";
+  const img0 = document.querySelector("#world > img"); img0.style.width = Wd + "px"; img0.style.height = Ht + "px";
+  const svg0 = $("svg"); svg0.setAttribute("viewBox", `0 0 ${Wd} ${Ht}`); svg0.setAttribute("width", Wd); svg0.setAttribute("height", Ht);
+  $("chan").textContent = TL.channel || "";
+  if (TL.style === "muted") root.classList.add("muted");
+  if (M.hires) {  // close-zoom inset (Sentinel-2), feathered edge over the base map
+    const h = document.createElement("img"); h.src = "assets/hires.jpg"; h.alt = "";
+    h.style.cssText = `position:absolute;left:${M.hires.x}px;top:${M.hires.y}px;width:${M.hires.w}px;height:${M.hires.h}px;` +
+      "-webkit-mask-image:radial-gradient(ellipse at center,#000 62%,transparent 72%);mask-image:radial-gradient(ellipse at center,#000 62%,transparent 72%)";
+    img0.after(h);
+    const c = document.createElement("div"); c.textContent = "Sentinel-2 cloudless 2016 © EOX (CC BY 4.0)" + (M.hires.shade ? " · Terrain © EOX, OpenStreetMap, SRTM" : "");
+    c.style.cssText = "position:absolute;left:24px;bottom:18px;font-size:20px;color:rgba(255,255,255,.7);text-shadow:0 1px 3px #000"; $("root").appendChild(c);
+  }
+  // palette: [fill, stroke]
+  const COL = { red: ["#d8343a", "#ffb0b0"], blue: [TL.style === "muted" ? "#5b7fe0" : "#8597ea", "#eef1ff"], orange: ["#ff8a1f", "#ffd59a"], purple: ["#9b5de5", "#e2ccff"],
+    green: ["#2bb673", "#b8f5d6"], grey: ["#8a8f98", "#e6e8ec"], gold: ["#f2c230", "#fff1b0"], teal: ["#13a8a8", "#b6f2f2"] };
+  const IMG = (n) => "assets/" + n + ".png";
+  const SCN = (n) => "assets/scene_" + n + ".png";
+  // camera span: degrees of longitude visible across the 1080px frame -> zoom
+  const Z = (span) => 1080 / (span * M.ppd * M.k);
+
+  // ── regions
+  const regEl = {}, regState = {};
+  for (const [k, r] of Object.entries(REGIONS)) {  // spec order = draw order (last on top)
+    const p = document.createElementNS(NS, "path"); p.setAttribute("d", r.d); p.setAttribute("class", "reg"); p.id = "reg-" + k;
+    const c = COL[r.color] || COL.red; p.style.fill = c[0]; p.style.stroke = c[1]; p.style.color = c[0];
+    $("regs").appendChild(p); regEl[k] = p; regState[k] = { op: 0, col: r.color };
+  }
+
+  // ── camera (explicit from-values so random seeking is exact)
+  const W = $("world"), cam = { cx: 0, cy: 0, z: 1, blur: 0 }, drift = { d: 1 };
+  const zMin = Math.max(1080 / Wd, 1920 / Ht);
+  const clampCam = (c) => { const z = Math.max(c.z, zMin); return { z,
+    cx: Math.min(Math.max(c.cx, 540 / z), Wd - 540 / z), cy: Math.min(Math.max(c.cy, 960 / z), Ht - 960 / z) }; };
+  const apply = () => { const z = cam.z * drift.d;
+    W.style.transform = `translate(${540 - cam.cx * z}px, ${960 - cam.cy * z}px) scale(${z})`;
+    W.style.setProperty("--z", z); $("view").style.filter = cam.blur > 0.05 ? `blur(${cam.blur}px)` : "none"; };
+  let cur = null;
+  const camTo = (lon, lat, z, at, dur, ease = "power2.inOut") => {
+    const to = clampCam({ cx: X(lon), cy: Y(lat), z: Z(z) });
+    if (!cur || dur <= 0) tl.set(cam, { ...to, onUpdate: apply }, at);
+    else tl.fromTo(cam, { ...cur }, { ...to, duration: dur, ease, onUpdate: apply, immediateRender: false }, at);
+    // ponytail: slow push-in after every move, next move's fromTo overrides it
+    tl.fromTo(drift, { d: 1 }, { d: 1.06, duration: 12, ease: "none", onUpdate: apply, immediateRender: false }, at);
+    cur = to; return at + Math.max(dur, 0);
+  };
+
+  // ── overlays
+  let active = [], uid = 0;
+  const named = {};
+  const anchor = (cls, lon, lat, html, at, fromVars = { scale: 0, opacity: 0 }, toVars = { scale: 1, opacity: 1, duration: .45, ease: "back.out(2)" }) => {
+    const a = document.createElement("div"); a.className = "anc " + cls; a.style.left = X(lon) + "px"; a.style.top = Y(lat) + "px";
+    a.innerHTML = `<div class="k"><div class="in">${html}</div></div>`; a.style.opacity = 0; $("ov").appendChild(a);
+    const inner = a.querySelector(".in");
+    tl.set(a, { opacity: 1 }, at); tl.fromTo(inner, fromVars, { ...toVars, immediateRender: false }, at);
+    active.push(a); return a;
+  };
+  const svgPath = (cls, d, at, dur) => {
+    const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); p.setAttribute("class", cls); $("lines").appendChild(p);
+    const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L;
+    tl.set(p, { opacity: 1 }, at); tl.fromTo(p, { strokeDashoffset: L }, { strokeDashoffset: 0, duration: dur, ease: "power2.inOut", immediateRender: false }, at);
+    active.push(p); return p;
+  };
+  const ptsD = (args) => args.map((s, i) => { const [lo, la] = s.split(",").map(Number); return (i ? "L" : "M") + X(lo).toFixed(1) + " " + Y(la).toFixed(1); }).join("");
+  const clearAll = (at) => { active.forEach((a) => tl.to(a, { opacity: 0, duration: .25, ease: "power1.in" }, at)); active = []; };
+
+  let sceneOn = null; const caps = [];
+  // one line always: measure laid-out width (fonts are embedded at render) and shrink to fit
+  const fitLine = (el, base, max) => {  // intrinsic text width (max-content) vs available width minus edge margin
+    const room = Math.min(max, (el.parentElement.clientWidth || 1080) - 80);
+    const s = el.getAttribute("style") || "";
+    el.style.cssText += ";white-space:nowrap;display:inline-block;width:max-content;position:absolute;right:auto;left:0";
+    const w = el.offsetWidth; el.setAttribute("style", s); el.style.whiteSpace = "nowrap";
+    if (w > room) el.style.fontSize = Math.floor(base * room / w) + "px"; };
+  let bigOff = 0, lastBig = null, lastCard = null;
+
+  // ── caption + cue interpreter
+  TL.lines.forEach((ln, i) => {
+    const t = ln.t, end = ln.end;
+    for (const raw of ln.cues) {
+      const [cmd, ...a] = raw.split(" ");
+      const n = (k) => parseFloat(a[k]);
+      if (cmd === "cam") camTo(n(0), n(1), n(2), t, a[3] !== undefined ? n(3) : 1.2);
+      else if (cmd === "whip") {
+        camTo(n(0), n(1), n(2), t, .55, "power3.inOut");
+        tl.fromTo(cam, { blur: 0 }, { blur: 10, duration: .25, ease: "power1.in", onUpdate: apply, immediateRender: false }, t);
+        tl.fromTo(cam, { blur: 10 }, { blur: 0, duration: .3, ease: "power1.out", onUpdate: apply, immediateRender: false }, t + .25);
+      }
+      else if (cmd === "show" || cmd === "hide") {
+        const k = a[0], s = regState[k]; if (!s) continue;
+        if (a[1] && COL[a[1]] && a[1] !== s.col) { tl.set(regEl[k], { fill: COL[a[1]][0], stroke: COL[a[1]][1] }, t); s.col = a[1]; }
+        const to = cmd === "show" ? 1 : 0;
+        if (t < 0.05) tl.set(regEl[k], { opacity: to }, 0);  // frame 0 must equal the loop's last frame
+        else tl.fromTo(regEl[k], { opacity: s.op }, { opacity: to, duration: .6, ease: "power1.inOut", immediateRender: false }, t);
+        s.op = to;
+      }
+      else if (cmd === "recolor") {
+        const k = a[0], s = regState[k], c = COL[a[1]];
+        tl.fromTo(regEl[k], { fill: COL[s.col][0], stroke: COL[s.col][1] }, { fill: c[0], stroke: c[1], duration: 1.2, ease: "power2.inOut", immediateRender: false }, t);
+        s.col = a[1];
+      }
+      else if (cmd === "pulse") {
+        const u = document.createElementNS(NS, "use"); u.setAttribute("href", "#reg-" + a[0]); u.setAttribute("class", "outline"); $("lines").appendChild(u);
+        tl.fromTo(u, { opacity: 0 }, { opacity: 1, duration: .35, repeat: 5, yoyo: true, ease: "sine.inOut", immediateRender: false }, t);
+        tl.set(u, { opacity: 1 }, t + 2.1); active.push(u);
+      }
+      else if (cmd === "river") svgPath("river", LINES_GEO[a[0]], t, 1.6);
+      else if (cmd === "arrow") { const p = svgPath("arrow", ptsD(a.slice(1)), t, 1.4); p.setAttribute("marker-end", "url(#ah)"); }
+      else if (cmd === "dash") { const p = document.createElementNS(NS, "path"); p.setAttribute("d", ptsD(a.slice(1))); p.setAttribute("class", "dash");
+        p.style.strokeDasharray = `${18 / cur.z} ${14 / cur.z}`; $("lines").appendChild(p);  // dash in screen px at current zoom
+        tl.fromTo(p, { opacity: 0 }, { opacity: 1, duration: .4, immediateRender: false }, t);
+        tl.fromTo(p, { strokeDashoffset: 0 }, { strokeDashoffset: -320 / cur.z, duration: end - t + 3, ease: "none", immediateRender: false }, t); active.push(p); }
+      else if (cmd === "route") {  // route id dur lon,lat ... : glowing trail drawn over dur seconds
+        const p = svgPath("route", ptsD(a.slice(2)), t, n(1)); }
+      else if (cmd === "band") {  // band id color widthPx dur lon,lat ... : thick trail (Minard-style), constant screen width
+        const p = svgPath("route", ptsD(a.slice(4)), t, n(3)); p.style.stroke = (COL[a[1]] || [a[1]])[0];
+        p.style.strokeWidth = `calc(${n(2)}px / var(--z))`; p.style.filter = "none"; p.style.strokeLinecap = "butt"; }
+      else if (cmd === "wave") {  // wave lon lat km dur : expanding shock ring(s)
+        const R = n(2) / 111 * M.ppd;
+        for (let j = 0; j < 3; j++) {
+          const e = document.createElementNS(NS, "ellipse"); e.setAttribute("class", "wave");
+          e.setAttribute("cx", X(n(0))); e.setAttribute("cy", Y(n(1))); $("lines").appendChild(e);
+          const t0 = t + j * n(3) / 4;
+          tl.fromTo(e, { attr: { rx: 0, ry: 0 }, opacity: 1 }, { attr: { rx: R * M.k, ry: R }, opacity: 0, duration: n(3), ease: "power1.out", immediateRender: false }, t0);
+          active.push(e);
+        } }
+      else if (cmd === "follow") {  // follow id dur lon,lat lon,lat ... : sprite travels a polyline
+        const s = named[a[0]]; if (!s) continue;
+        const pts = a.slice(2).map((q) => q.split(",").map(Number));
+        let L = 0; const seg = pts.map((q, j) => j ? Math.hypot(X(q[0]) - X(pts[j - 1][0]), Y(q[1]) - Y(pts[j - 1][1])) : 0); L = seg.reduce((x, y) => x + y, 0);
+        let tt = t;
+        pts.forEach((q, j) => { if (!j) return; const d = n(1) * seg[j] / L;
+          tl.fromTo(s.el, { x: X(s.lon) - X(s.lon0), y: Y(s.lat) - Y(s.lat0) }, { x: X(q[0]) - X(s.lon0), y: Y(q[1]) - Y(s.lat0), duration: d, ease: "none", immediateRender: false }, tt);
+          s.lon = q[0]; s.lat = q[1]; tt += d; }); }
+      else if (cmd === "walk" || cmd === "sail") {  // walk|sail id dur lon,lat ... : follow + waddle (walk) or gentle rocking (sail), faces travel direction
+        const s = named[a[0]]; if (!s) continue; const im = s.el.querySelector("img");
+        const pts = a.slice(2).map((q) => q.split(",").map(Number));
+        const seg = pts.map((q, j) => j ? Math.hypot(X(q[0]) - X(pts[j - 1][0]), Y(q[1]) - Y(pts[j - 1][1])) : 0), L = seg.reduce((x, y) => x + y, 0) || 1;
+        let tt = t;  // ponytail: tokens are generated facing right; flip on leftward segments
+        pts.forEach((q, j) => { if (!j) return; const d = n(1) * seg[j] / L, dx = X(q[0]) - X(pts[j - 1][0]);
+          if (Math.abs(dx) > 2) tl.set(im, { scaleX: dx < 0 ? -1 : 1 }, tt);
+          tl.fromTo(s.el, { x: X(s.lon) - X(s.lon0), y: Y(s.lat) - Y(s.lat0) }, { x: X(q[0]) - X(s.lon0), y: Y(q[1]) - Y(s.lat0), duration: d, ease: "none", immediateRender: false }, tt);
+          s.lon = q[0]; s.lat = q[1]; tt += d; });
+        const w = cmd === "walk" ? { r: 6, y: -14, p: .2 } : { r: 3, y: -6, p: .7 };
+        tl.fromTo(im, { rotation: -w.r, y: 0 }, { rotation: w.r, y: w.y, duration: w.p, repeat: Math.max(1, Math.round(n(1) / w.p)), yoyo: true, ease: "sine.inOut", immediateRender: false }, t);
+        tl.set(im, { rotation: 0, y: 0 }, t + n(1) + .05); }
+      else if (cmd === "flash") tl.fromTo("#flash", { opacity: .9 }, { opacity: 0, duration: .45, ease: "power2.out", immediateRender: false }, t);
+      else if (cmd === "shake") { const d = a[0] ? n(0) : .5, k = Math.round(d / .05);
+        for (let j = 0; j < k; j++) tl.set("#view", { x: j === k - 1 ? 0 : ((j * 37) % 23 - 11) * (1 - j / k), y: j === k - 1 ? 0 : ((j * 53) % 19 - 9) * (1 - j / k) }, t + j * .05); }
+      else if (cmd === "outro") {  // outro ชื่อเรื่อง|บรรทัดรอง : end card, stays to the end
+        const [tt1, ss] = a.join(" ").split("|"); $("outro").querySelector(".t").textContent = tt1; $("outro").querySelector(".s").textContent = ss || "";
+        fitLine($("outro").querySelector(".t"), 96, 9999); fitLine($("outro").querySelector(".s"), 50, 9999);
+        tl.fromTo("#outro", { opacity: 0 }, { opacity: 1, duration: .6, ease: "power2.out", immediateRender: false }, t);
+        const keepRecap = !!$("recap").dataset.on;  // a recap card stays: the title sits above it instead of covering the screen
+        if (keepRecap) { const O = $("outro"); O.style.justifyContent = "flex-start"; O.style.paddingTop = "430px";
+          O.style.background = "linear-gradient(rgba(6,23,46,.85), rgba(6,23,46,.55) 55%, rgba(6,23,46,0) 70%)"; }
+        tl.to(["#caps", "#big", "#chap", "#cards", "#src"].concat(keepRecap ? [] : ["#recap"]), { opacity: 0, duration: .3 }, t);
+        tl.fromTo("#outro .t", { scale: 1.25, opacity: 0 }, { scale: 1, opacity: 1, duration: .6, ease: "back.out(1.6)", immediateRender: false }, t + .1);
+        tl.fromTo("#outro .line", { width: 0 }, { width: 420, duration: .8, ease: "power2.out", immediateRender: false }, t + .4);
+        tl.fromTo("#outro .s", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: .5, immediateRender: false }, t + .6); }
+      else if (cmd === "bars") {  // bars ป้าย:ค่า:สี ป้าย:ค่า:สี ... : 3D-ish comparison bars that grow and count up
+        const B = $("bars"); B.innerHTML = ""; const items = a.map((q) => q.split(":")), mx = Math.max(...items.map((q) => +q[1]));
+        items.forEach(([lb, v, c], j) => { const d = document.createElement("div"); d.className = "b";
+          d.innerHTML = `<div class="v">0</div><div class="bar" style="background:linear-gradient(90deg,${(COL[c] || COL.grey)[0]},${(COL[c] || COL.grey)[1]} 45%,${(COL[c] || COL.grey)[0]})"></div><div class="l">${lb.replace(/_/g, " ")}</div>`; B.appendChild(d);
+          const h = Math.max(30, 420 * +v / mx), bar = d.querySelector(".bar"), vv = d.querySelector(".v"), o = { n: 0 };
+          tl.fromTo(bar, { height: 0 }, { height: h, duration: .9, ease: "power3.out", immediateRender: false }, t + .15 + j * .35);
+          tl.fromTo(o, { n: 0 }, { n: +v, duration: .9, ease: "power3.out", immediateRender: false, onUpdate: () => { vv.textContent = Math.round(o.n).toLocaleString("en-US"); } }, t + .15 + j * .35); });
+        tl.fromTo(B, { opacity: 0 }, { opacity: 1, duration: .25, immediateRender: false }, t);
+        tl.to(B, { opacity: 0, duration: .3 }, Math.max(end + .5, t + 3.5)); }
+      else if (cmd === "chapter") {  // chapter ข้อความ : orange pill at top, stays until next chapter / "chapter -"
+        const tx = a.join(" "), sp = $("chap").querySelector("span");
+        tl.to("#chap", { opacity: 0, duration: .15 }, t);
+        const num = /^\d+$/.test(a[0]) && a.length > 1;  // "chapter 2 ชื่อบท" → numbered badge
+        const html = num ? `<i>${a[0]}</i>${a.slice(1).join(" ")}` : tx;
+        if (tx !== "-") { tl.set(sp, { innerHTML: html }, t + .15); tl.fromTo("#chap", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: .35, ease: "back.out(2)", immediateRender: false }, t + .15); } }
+      else if (cmd === "card") {  // card หัวเล็ก|ข้อความใหญ่|บรรทัดเล็ก : info card lower third
+        const [h, m, f] = a.join(" ").split("|"), el = document.createElement("div"); el.className = "icard";
+        el.innerHTML = `<div class="h">${h || ""}</div><div class="m">${m || ""}</div>${f ? `<div class="f">${f}</div>` : ""}`; $("cards").appendChild(el);
+        fitLine(el.querySelector(".m"), 76, 9999); if (f) fitLine(el.querySelector(".f"), 26, 9999);
+        if (lastCard) tl.to(lastCard, { opacity: 0, duration: .2 }, t);
+        tl.fromTo(el, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .4, ease: "power3.out", immediateRender: false }, t);
+        tl.to(el, { opacity: 0, duration: .3 }, Math.max(end + 1.2, t + 3)); lastCard = el; }
+      else if (cmd === "title") {  // title บรรทัดบน|คำเด่น|บรรทัดล่าง : hook question in the middle of the screen
+        const [x, y, z] = a.join(" ").split("|"); const T = $("title");
+        T.innerHTML = `<div class="a">${x || ""}</div><div class="b">${y || ""}</div><div class="c">${z || ""}</div>`;
+        T.querySelectorAll("div").forEach((d, j) => fitLine(d, [70, 140, 70][j], 9999));
+        tl.fromTo(T, { opacity: 0, scale: .85 }, { opacity: 1, scale: 1, duration: .45, ease: "back.out(1.7)", immediateRender: false }, t);
+        tl.to(T, { opacity: 0, duration: .3 }, end); }
+      else if (cmd === "recap") {  // recap ข้อความ : add a ticked line to the closing summary card
+        const R = $("recap"), it = document.createElement("div"); it.className = "it"; it.innerHTML = `<i>✓</i><span>${a.join(" ")}</span>`; R.appendChild(it);
+        fitLine(it.querySelector("span"), 34, 860);
+        if (!R.dataset.on) { R.dataset.on = 1; if (lastCard) tl.to(lastCard, { opacity: 0, duration: .2 }, t); tl.fromTo(R, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .4, immediateRender: false }, t); }
+        tl.fromTo(it, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: .35, ease: "power2.out", immediateRender: false }, t + .2); }
+      else if (cmd === "source") { $("src").textContent = "ที่มา: " + a.join(" "); tl.fromTo("#src", { opacity: 0 }, { opacity: 1, duration: .3, immediateRender: false }, t); }
+      else if (cmd === "icon") anchor("icon", n(1), n(2), a.slice(3).join(" "), t, { scale: 0, opacity: 0, rotation: -20 }, { scale: 1, opacity: 1, rotation: 0, duration: .5, ease: "back.out(2.2)" });  // icon id lon lat 🇬🇧
+      else if (cmd === "pin") anchor("pin", n(1), n(2), "", t, { y: -60, opacity: 0 }, { y: 0, opacity: 1, duration: .5, ease: "bounce.out" });
+      else if (cmd === "label") anchor("label", n(1), n(2), a.slice(3).join(" "), t);
+      else if (cmd === "pill") anchor("pill", n(1), n(2), a.slice(3).join(" "), t);
+      else if (cmd === "ring") { const r = n(3), el = anchor("ring", n(1), n(2), "", t);
+        const inn = el.querySelector(".in"); inn.style.width = inn.style.height = 2 * r + "px";
+        tl.fromTo(inn, { rotation: 0 }, { rotation: 90, duration: 8, ease: "none", immediateRender: false }, t); }
+      else if (cmd === "sprite") {
+        const el = anchor("sprite", n(2), n(3), `<img src="${IMG(a[1])}" alt="">`, t, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: .5, ease: "back.out(1.8)" });
+        el.querySelector(".in").style.height = n(4) + "px"; named[a[0]] = { el, lon: n(2), lat: n(3), lon0: n(2), lat0: n(3) };
+        if (a[1] === "point" || a[1] === "stand" || a[1] === "map_pose")  // idle bob
+          tl.fromTo(el.querySelector("img"), { y: 0 }, { y: -10, duration: .6, repeat: Math.ceil((end - t + 6) / .6), yoyo: true, ease: "sine.inOut", immediateRender: false }, t + .5);
+      }
+      else if (cmd === "move") { const s = named[a[0]]; if (!s) continue;
+        tl.fromTo(s.el, { x: X(s.lon) - X(s.lon0), y: Y(s.lat) - Y(s.lat0) }, { x: X(n(1)) - X(s.lon0), y: Y(n(2)) - Y(s.lat0), duration: n(3), ease: "power1.inOut", immediateRender: false }, t);
+        s.lon = n(1); s.lat = n(2); }
+      else if (cmd === "big") { const [num, unit] = a.join(" ").split("|"); const b = document.createElement("div");
+        b.style.cssText = "position:absolute;inset:0;opacity:0"; b.innerHTML = `<div class="n">${num}</div><div class="u">${unit || ""}</div>`; $("big").appendChild(b);
+        const nn = b.querySelector(".n"); nn.style.display = "inline-block"; fitLine(nn, 190, 9999); fitLine(b.querySelector(".u"), 64, 9999);
+        const off = Math.min(end + .8, t + 3.2);
+        if (lastBig && lastBig.off > t) tl.to(lastBig.el, { opacity: 0, duration: .15 }, t);  // never stack two big numbers
+        lastBig = { el: b, off };
+        tl.set("#big", { opacity: 1, className: sceneOn ? "low" : "" }, t); tl.fromTo(b, { opacity: 0, scale: 1.6 }, { opacity: 1, scale: 1, duration: .35, ease: "power3.out", immediateRender: false }, t);
+        tl.to(b, { opacity: 0, duration: .25 }, off); }
+      else if (cmd === "scene") {
+        const s = document.createElement("div"); s.className = "scene";
+        s.innerHTML = `<img src="${SCN(a[0])}" alt="">${a[1] === "rain" ? '<div class="rain"></div>' : ""}<div class="badge">ฉากจำลอง</div>`;
+        $("scenes").appendChild(s);
+        if (sceneOn) tl.to(sceneOn, { opacity: 0, duration: .4 }, t + .3);
+        tl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: .45, immediateRender: false }, t);
+        tl.fromTo(s.querySelector("img"), { scale: 1.02 }, { scale: 1.14, duration: 14, ease: "none", immediateRender: false }, t);
+        const rain = s.querySelector(".rain");
+        if (rain) tl.fromTo(rain, { x: 0, y: 0 }, { x: -60, y: 1830, duration: 14, ease: "none", immediateRender: false }, t);
+        sceneOn = s;
+      }
+      else if (cmd === "endscene" && sceneOn) { tl.to(sceneOn, { opacity: 0, duration: .45 }, t); sceneOn = null; }
+      else if (cmd === "clear") clearAll(t);
+    }
+    // caption (a line carrying a centre title shows the title instead)
+    if (ln.cues.some((q) => q.startsWith("title "))) return;
+    const c = document.createElement("div"); c.className = "cap" + (sceneOn ? " top" : "");
+    c.innerHTML = ln.show.replace(/\{(.+?)\}/g, "<b>$1</b>"); $("caps").appendChild(c);
+    // ponytail: no JS measuring here (Kanit loads after build so widths lie) — CSS wraps long lines into 2 balanced rows
+    tl.fromTo(c, { opacity: 0, scale: .88 }, { opacity: 1, scale: 1, duration: .16, ease: "back.out(2)", immediateRender: false }, t);
+    tl.set(c, { opacity: 0 }, end);
+  });
+
+  tl.to("#vig", { opacity: 1, duration: DUR }, 0);  // pins timeline length
+  apply();
+  window.__timelines = window.__timelines || {};
+  window.__timelines["root"] = tl;
+})();
+</script>
+</body>
+</html>
