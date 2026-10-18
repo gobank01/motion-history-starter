@@ -11,3 +11,4 @@ topics/*/voice.mp3
 topics/*/audio.wav
 __pycache__/
 .DS_Store
+topics/*/.hyperframes/
