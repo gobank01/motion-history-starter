@@ -9,5 +9,7 @@ def key(name):
     env = os.path.join(HERE, ".env")
     if os.path.exists(env):
         for l in open(env):
-            if l.startswith(name + "="): return l.split("=", 1)[1].strip().strip("'\"")
+            if l.startswith(name + "="):
+                v = l.split("=", 1)[1].split("#", 1)[0].strip().strip("'\"")  # ตัดคอมเมนต์ท้ายบรรทัด
+                if v: return v
     raise SystemExit(f"ไม่พบ {name} — ก๊อป .env.example เป็น .env แล้วใส่คีย์ของคุณ")
