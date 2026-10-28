@@ -1,7 +1,7 @@
 # Motion History Starter 🗺️
 
 ชุดเครื่องมือทำ **คลิปเล่าประวัติศาสตร์บนแผนที่** แนวตั้ง 9:16 ภาษาไทย ยาว ~1 นาที แบบที่โพสต์ลง TikTok / Reels / Shorts ได้เลย
-เขียนบท 1 ไฟล์ (`script.py`) → ได้แผนที่ดาวเทียม + เขตแดนเรืองแสง + ตัวละครเดินตามเส้นทาง + เสียงพากย์ไทย + ดนตรี + ซับ → MP4
+เขียนบท 1 ไฟล์ (`script.py`) → ได้แผนที่ดาวเทียม + เขตแดนเรืองแสง + ตัวละครเดินตามเส้นทาง + เสียงพากย์ไทย + ดนตรี + ซับ → หน้าปก → MP4 พร้อมโพสต์
 
 ตัวอย่างที่มีให้ใน `topics/`:
 - `015-pearl-harbor` เพิร์ลฮาร์เบอร์ (สไตล์แผนที่หม่นนูน, แผนที่ข้ามแปซิฟิก, ภาพละเอียดเกาะโออาฮู)
@@ -9,41 +9,53 @@
 
 ---
 
+## เริ่มใช้ใน 3 คำสั่ง
+เปิดแอป **Terminal** บน Mac แล้ววางทีละบรรทัด
+```bash
+git clone https://github.com/gobank01/motion-history-starter.git && cd motion-history-starter
+./setup.sh                 # ลงทุกอย่างที่ต้องใช้ แล้วบอกว่าขาดอะไร (รันซ้ำได้)
+./make.sh 029-champa       # ทำคลิปตัวอย่าง "จามปา หายไปไหน" ครบทุกขั้น
+```
+ระหว่าง `./setup.sh` จะขอให้ใส่คีย์ 2 ตัวในไฟล์ `.env` (พิมพ์ `open -e .env` เพื่อเปิดแก้) แล้วรัน `./setup.sh` อีกครั้งจนขึ้น **พร้อมทำคลิป ✅**
+
+ได้ไฟล์ใน `renders/`:
+- `029-champa-final.mp4` คลิปพร้อมโพสต์ (ใส่ปกเป็นเฟรมแรกให้แล้ว แพลตฟอร์มดึงเป็นหน้าปกได้เลย)
+- `029-champa-cover.png` หน้าปกแยกไว้ใช้อัปโหลดเป็นภาพปก
+- `029-champa.mp4` คลิปแบบไม่มีปก
+
+ครั้งแรกจะดาวน์โหลดภาพดาวเทียม NASA + เส้นเขตแดน (หลายร้อย MB ครั้งเดียว ใช้เวลาสักพัก)
+เปลี่ยนชื่อช่องที่มุมขวาบนของคลิป: เปิด `config.py` แก้ `CHANNEL`
+
 ## ต้องมีอะไรบ้าง
 | | |
 |---|---|
-| เครื่อง | **macOS** (ใช้ Vision ตัดพื้นหลังตัวละครฟรีในเครื่อง) · RAM 16GB ขึ้นไป |
-| โปรแกรม | Python 3.10+ · Node.js 18+ · ffmpeg (`brew install ffmpeg node python`) |
-| คีย์ | [ElevenLabs](https://elevenlabs.io) (เสียงพากย์/ดนตรี/SFX) · [OpenRouter](https://openrouter.ai/keys) (สร้างภาพตัวละคร/ฉาก) |
-| ค่าใช้จ่ายต่อคลิป | ภาพ 5–6 ภาพ ≈ 15–20 บาท · เสียงพากย์ ≈ 700 ตัวอักษร (แพ็กเกจ ElevenLabs Starter ได้ ~40 คลิป/เดือน) |
+| เครื่อง | **Mac** (ใช้ Vision ของ Apple ตัดพื้นหลังตัวละครฟรีในเครื่อง) · RAM 16GB ขึ้นไป |
+| โปรแกรม | `./setup.sh` ลงให้เอง: Python 3 · Node.js 22+ · ffmpeg (ผ่าน [Homebrew](https://brew.sh)) · ต้องมี Xcode Command Line Tools (`xcode-select --install`) |
+| คีย์ | [ElevenLabs](https://elevenlabs.io) (เสียงพากย์/ดนตรี/SFX) · [OpenRouter](https://openrouter.ai/keys) (ภาพตัวละคร/ฉาก/ปก) — เติมเงินขั้นต่ำก่อนใช้ |
+| ค่าใช้จ่ายต่อคลิป | ภาพ 5–7 ภาพรวมปก ≈ 20–25 บาท · เสียงพากย์ ≈ 700 ตัวอักษร (แพ็กเกจ ElevenLabs Starter ได้ ~40 คลิป/เดือน) |
 
-## ติดตั้ง (ครั้งเดียว)
+## ทำต่อจากขั้นไหนก็ได้
+ขั้นทั้งหมด: `map` → `assets` → `build` → `mix` → `render` → `cover`
 ```bash
-git clone https://github.com/gobank01/motion-history-starter.git
-cd motion-history-starter
-pip3 install -r requirements.txt
-cp .env.example .env      # แล้วเปิดไฟล์ .env ใส่คีย์ 2 ตัว
+./make.sh 029-champa build     # แก้คิวภาพแล้วเรนเดอร์ใหม่ เสียงที่เคยพากย์ใช้ซ้ำจากแคช (แก้ข้อความ = พากย์ใหม่)
+./make.sh 029-champa cover     # ทำแค่ปก (อยากได้ปกใหม่ ลบ renders/029-champa-cover.png ก่อน)
 ```
-เปิด `config.py` เปลี่ยน `CHANNEL` เป็นชื่อช่องของคุณ (ขึ้นมุมขวาบนของคลิป)
 
-## ทำคลิปแรก (ลองกับตัวอย่าง)
-```bash
-./make.sh 029-champa
-```
-ได้ไฟล์ `renders/029-champa.mp4` · ครั้งแรกจะดาวน์โหลดภาพดาวเทียม NASA + เส้นเขตแดน (หลายร้อย MB ครั้งเดียว)
-
-ทำต่อจากขั้นไหนก็ได้ เช่นแก้คิวภาพแล้วอยากเรนเดอร์ใหม่โดยไม่เสียค่าเสียงซ้ำ:
-```bash
-./make.sh 029-champa build     # เสียงที่เคยพากย์แล้วจะใช้ซ้ำจากแคช (แก้ข้อความ = พากย์ใหม่)
-```
-ขั้นทั้งหมด: `map` → `assets` → `build` → `mix` → `render`
+## ติดปัญหา
+| อาการ | แก้ |
+|---|---|
+| `permission denied: ./setup.sh` | `chmod +x setup.sh make.sh` แล้วรันใหม่ |
+| `ไม่พบ ELEVENLABS_API_KEY` | ใส่คีย์ในไฟล์ `.env` ต่อจาก `=` ไม่ต้องมีเครื่องหมายคำพูด |
+| `xcrun: error` / ไม่มี `swift` | `xcode-select --install` รอติดตั้งเสร็จ แล้วรัน `./setup.sh` |
+| ขั้น `render` บอกว่า Node เก่า | `brew upgrade node` (ต้อง 22 ขึ้นไป) |
+| เสียงพากย์ใช้ไม่ได้ (voice not found) | ดูหัวข้อ "เสียงพากย์" ด้านล่าง |
 
 ## ทำเรื่องใหม่ของคุณเอง (แนะนำให้ใช้ Claude Code)
 1. สร้างโฟลเดอร์ `topics/030-เรื่องของคุณ/`
 2. เปิด Claude Code ในโฟลเดอร์นี้ แล้ววางเนื้อหาไฟล์ `prompts/BRIEF-WRITER.md` พร้อมบอกหัวข้อ → ได้ `script.py` + `NOTES.md`
 3. **ตรวจข้อเท็จจริงก่อนพากย์เสมอ** เปิดเอเจนต์อีกตัว วาง `prompts/BRIEF-CHECKER.md` (ไม่ให้คนเขียนตรวจงานตัวเอง)
-4. `./make.sh 030-เรื่องของคุณ`
-5. เปิดดูทุกเฟรมแบบเร็วๆ: `ffmpeg -i renders/030-*.mp4 -vf "fps=1/2.5,scale=180:-2,tile=8x3" -frames:v 1 qa.jpg`
+4. ใส่ `COVER = ("บรรทัดใหญ่", "บรรทัดรอง", "scene prompt", ["ภาพตัวละคร.png"])` ใน script.py (ดูตัวอย่างท้ายไฟล์ `topics/029-champa/script.py`) แล้วรัน `./make.sh 030-เรื่องของคุณ`
+5. เปิดดูทุกเฟรมแบบเร็วๆ: `ffmpeg -i renders/030-*-final.mp4 -vf "fps=1/2.5,scale=180:-2,tile=8x3" -frames:v 1 qa.jpg`
 
 หรือติดตั้งสกิลไว้ให้ Claude ทำครบทุกขั้น: ไฟล์ `.claude/skills/motion-history/SKILL.md` อยู่ในโปรเจคนี้แล้ว (ใช้ได้อัตโนมัติเมื่อเปิด Claude Code ในโฟลเดอร์นี้)
 
@@ -57,6 +69,8 @@ cp .env.example .env      # แล้วเปิดไฟล์ .env ใส่�
 | `engine/sprites/` | มาสคอตประจำช่อง 3 ท่า (เปลี่ยนเป็นของคุณได้ ใช้ชื่อไฟล์เดิม) · `engine/style_ref.png` = ภาพอ้างอิงสไตล์ให้ภาพที่สร้างทุกภาพ |
 | `tools/mapgen.py` | สร้างแผนที่ (NASA Blue Marble + Natural Earth + Sentinel-2 สำหรับซูมใกล้) |
 | `tools/assets.py` | สร้างตัวละคร (แผ่นสติกเกอร์ → ตัดพื้นหลัง) + ฉากจำลอง |
+| `tools/cover.py` | หน้าปก 9:16 จาก `COVER` + ฝังเป็นเฟรมแรกของคลิป |
+| `setup.sh` | ติดตั้ง/ตรวจเครื่อง รันซ้ำได้ทุกเมื่อ |
 
 ## เสียงพากย์
 `VOICE` ในตัวอย่างคือเสียงจาก Voice Library ของ ElevenLabs — ถ้าบัญชีคุณใช้ไม่ได้ ให้เลือกเสียงไทยที่ชอบใน ElevenLabs แล้วเอา Voice ID มาใส่แทน
